@@ -9,25 +9,24 @@ import os
 url = "https://api.bilibili.com/x/v2/reply/up/fulllist"
 del_url = "https://api.bilibili.com/x/v2/reply/del"
 load_dotenv()
-csrf_token = os.getenv("CSRF_TOKEN")
-cookie = os.getenv("COOKIE")
-apikey = os.getenv("API_KEY")
+# csrf_token = os.getenv("CSRF_TOKEN")
+# cookie = os.getenv("COOKIE")
+# apikey = os.getenv("API_KEY")
 
 # 打印配置，检查是否加载成功
-print(csrf_token, cookie)
+# print(csrf_token, cookie)
 
-# 请求头
-headers = {
-    "accept": "application/json, text/plain, */*",
-    "accept-encoding": "gzip, deflate, br, zstd",
-    "accept-language": "zh-CN,zh;q=0.9",
-    "cookie": cookie,  # 请替换为实际 cookie
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
-}
 
 
 # 发送 GET 请求，获取评论数据
-def fetch_comments(oid, page, page_size=10):
+def fetch_comments(oid, page, csrf_token, cookie,page_size=10):
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "cookie": cookie,  # 请替换为实际 cookie
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+    }
     params = {
         "order": 1,
         "filter": -1,
@@ -48,9 +47,9 @@ def fetch_comments(oid, page, page_size=10):
 
 
 # 解析评论数据
-def parse_comments(oid):
+def parse_comments(oid,csrf_token, cookie):
     page = 1
-    response = fetch_comments(oid, page)  # 获取第一页评论
+    response = fetch_comments(oid, page,csrf_token, cookie)  # 获取第一页评论
     total = response['data']['page']['total']
     print(f"视频 {oid} 总评论数: {total}")
     data_list = []
@@ -66,13 +65,22 @@ def parse_comments(oid):
             data_list.append(data)
         if len(data_list) < total:
             page += 1  # 下一页
-            response = fetch_comments(oid, page)  # 获取下一页评论
+            response = fetch_comments(oid, page, csrf_token, cookie)  # 获取下一页评论
+        # TODO 测试时只要一页
+        break
 
     return data_list
 
 
 # 发送 POST 请求，删除恶意评论
-def delete_comment(rpid, oid):
+def delete_comment(rpid, oid,csrf_token, cookie):
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "cookie": cookie,  # 请替换为实际 cookie
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+    }
     data = {
         "oid": str(oid),
         "type": "1",  # 假设type是1
@@ -94,7 +102,7 @@ def split_list_by_chunks(lst, chunk_size=10):
 
 
 # 调用大模型判断 message 是否善意
-def filter_non_positive_comments(data_list):
+def filter_non_positive_comments(data_list,apikey):
     client = OpenAI(api_key=apikey,
                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
     # 改为每10条分析一次，不然响应时间太慢了
@@ -136,10 +144,13 @@ def main():
         bad_list = filter_non_positive_comments(sub_list)
         print(f"恶意评论数量: {len(bad_list)}")
         print(bad_list)
+        # 测试时只分析前10条
+        break
         # 删除恶意评论
         # for bad_comment in bad_list:
         #     delete_comment(bad_comment['rpid'], bad_comment['oid'])
         #     time.sleep(3)  # 请求间隔 3 秒
+
 
 
 if __name__ == "__main__":

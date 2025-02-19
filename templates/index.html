@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilibili 恶意评论检测</title>
+    <!-- 引入 Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">输入你的 Bilibili 配置</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label for="csrf_token">视频BV号</label>
+                <input type="text" id="oid" name="oid" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="csrf_token">CSRF Token:</label>
+                <input type="text" id="csrf_token" name="csrf_token" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="cookie">Cookie:</label>
+                <textarea id="cookie" name="cookie" class="form-control" rows="5" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="apikey">OpenAI API Key:</label>
+                <input type="text" id="apikey" name="apikey" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">提交</button>
+        </form>
+
+        {% if bad_list %}
+            <h2 class="mt-4">恶意评论结果：</h2>
+            <ul class="list-group mt-3">
+                {% for comment in bad_list %}
+                    <li class="list-group-item">{{ comment }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <!-- 引入 Bootstrap JS 和 Popper.js -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

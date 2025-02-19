@@ -11,6 +11,8 @@ del_url = "https://api.bilibili.com/x/v2/reply/del"
 load_dotenv()
 csrf_token = os.getenv("CSRF_TOKEN")
 cookie = os.getenv("COOKIE")
+apikey = os.getenv("API_KEY")
+
 # 打印配置，检查是否加载成功
 print(csrf_token, cookie)
 
@@ -69,7 +71,6 @@ def parse_comments(oid):
     return data_list
 
 
-
 # 发送 POST 请求，删除恶意评论
 def delete_comment(rpid, oid):
     data = {
@@ -88,15 +89,22 @@ def delete_comment(rpid, oid):
         print(f"响应内容: {response.text}")
 
 
+def split_list_by_chunks(lst, chunk_size=10):
+    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+
+
 # 调用大模型判断 message 是否善意
 def filter_non_positive_comments(data_list):
-    client = OpenAI(api_key="sk-786268aff7be44c282f4ab12d16115d0", base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
+    client = OpenAI(api_key=apikey,
+                    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
+    # 改为每10条分析一次，不然响应时间太慢了
     completion = client.chat.completions.create(
         model="qwen-long",
         messages=[
             {'role': 'system', 'content': 'You are a helpful assistant.'},
-            {'role': 'system', 'content': str(data_list[-20:])},
-            {'role': 'user', 'content': '筛选出上面数组中非善意（或潜在不太合适的表达）评论的message数据，按照原数组的格式输出，只要输出数组结果，禁止输出其他文字'}
+            {'role': 'system', 'content': str(data_list)},
+            {'role': 'user',
+             'content': '筛选出上面数组中非善意（或潜在不太合适的表达）评论的message数据，按照原数组的格式输出，只要输出数组结果，禁止输出其他文字'}
         ],
         stream=True,
         stream_options={"include_usage": True}
@@ -121,16 +129,17 @@ def main():
     # 分页获取评论数据
     data_list = parse_comments(oid)
     print(f"获取到 {len(data_list)} 条评论数据。")
-
-    # 调用大模型判断恶意评论
-    bad_list = filter_non_positive_comments(data_list)
-    print(f"恶意评论数量: {len(bad_list)}")
-    print(bad_list)
-
-    # 删除恶意评论
-    # for bad_comment in bad_list:
-    #     delete_comment(bad_comment['rpid'], bad_comment['oid'])
-    #     time.sleep(3)  # 请求间隔 3 秒
+    # 调用函数进行切片
+    sub_lists = split_list_by_chunks(data_list)
+    for sub_list in sub_lists:
+        # 调用大模型判断恶意评论
+        bad_list = filter_non_positive_comments(sub_list)
+        print(f"恶意评论数量: {len(bad_list)}")
+        print(bad_list)
+        # 删除恶意评论
+        # for bad_comment in bad_list:
+        #     delete_comment(bad_comment['rpid'], bad_comment['oid'])
+        #     time.sleep(3)  # 请求间隔 3 秒
 
 
 if __name__ == "__main__":

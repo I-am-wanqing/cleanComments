@@ -1,2 +1,3 @@
 # 忽略 .env 文件
 .env
+.venv
